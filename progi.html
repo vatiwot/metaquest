@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <title>Epley Manőver VR Segéd</title>
+  <!-- A-Frame VR Keretrendszer betöltése -->
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+</head>
+<body>
+  <a-scene webxr="optionalFeatures: hit-test, local-floor">
+    <!-- Kamera / Gyerek nézet -->
+    <a-entity id="rig" position="0 1.6 0">
+      <a-camera id="camera" look-controls>
+        <!-- Útmutató szöveg a felhasználó látóterében -->
+        <a-text id="instruction-text" value="Epley Manover\nForditsd a fejed 45 fokkal JOBBRA!" 
+                position="0 0.3 -1.5" align="center" color="#FFFFFF" width="2"></a-text>
+        
+        <!-- Célpont / szögjelző gömb -->
+        <a-sphere id="target-indicator" position="0 0 -1" radius="0.05" color="#FF0000"></a-sphere>
+      </a-camera>
+    </a-entity>
+
+    <!-- Háttér környezet (egyszerű fények) -->
+    <a-sky color="#1A1A2E"></a-sky>
+    <a-light type="ambient" color="#FFF"></a-light>
+  </a-scene>
+
+  <script>
+    // A manőver lépései (Jobb fül Epley-manőver példa)
+    // Megadott Y elfordulás (Yaw) és időzítések
+    const steps = [
+      { text: "1. Lépés: Ülj egyenesen. Fordítsd a fejed 45° fokkal JOBBRA!", targetYaw: -45, time: 30 },
+      { text: "2. Lépés: Feküdj hanyatt, a fejed maradjon JOBBRA fordítva!", targetYaw: -45, time: 30 },
+      { text: "3. Lépés: Fordítsd a fejed 90°-al BALRA (45° balra)!", targetYaw: 45, time: 30 },
+      { text: "4. Lépés: Fordulj a bal oldaladra, nézz a föld felé!", targetYaw: 135, time: 30 },
+      { text: "5. Lépés: Lassan ülj fel!", targetYaw: 0, time: 30 }
+    ];
+
+    let currentStep = 0;
+    let timer = null;
+    let timeLeft = 0;
+
+    const textEl = document.getElementById('instruction-text');
+    const indicatorEl = document.getElementById('target-indicator');
+    const cameraEl = document.getElementById('camera');
+
+    // Fejpozíció ellenőrzése minden képkockánál
+    function checkHeadRotation() {
+      if (currentStep >= steps.length) {
+        textEl.setAttribute('value', "Kész! A manőver sikeresen lefutott.");
+        indicatorEl.setAttribute('color', '#00FF00');
+        return;
+      }
+
+      // Fej elfordulásának lekérése (fokokban)
+      const rotation = cameraEl.getAttribute('rotation');
+      const currentYaw = rotation.y; // Y tengely körüli forgás (jobbra/balra)
+
+      const target = steps[currentStep].targetYaw;
+      const margin = 15; // 15 fokos hibahatár megengedett
+
+      // Ha a fej a megfelelő tartományban van
+      if (Math.abs(currentYaw - target) < margin) {
+        indicatorEl.setAttribute('color', '#00FF00'); // Zöldre vált
+        
+        // Időzítő indítása, ha még nem fut
+        if (!timer) {
+          timeLeft = steps[currentStep].time;
+          timer = setInterval(() => {
+            timeLeft--;
+            textEl.setAttribute('value', ${steps[currentStep].text}\nTartsd meg: ${timeLeft}s);
+            
+            if (timeLeft <= 0) {
+              clearInterval(timer);
+              timer = null;
+              currentStep++; // Következő lépésre ugrás
+            }
+          }, 1000);
+        }
+      } else {
+        indicatorEl.setAttribute('color', '#FF0000'); // Piros, ha rossz a szög
+        if (timer) {
+          clearInterval(timer);
+          timer = null;
+          textEl.setAttribute('value', ${steps[currentStep].text}\n(Igazítsd be a fejed!));
+        }
+      }
+    }
+
+    // Ciklus futtatása 100ms-onként
+    setInterval(checkHeadRotation, 100);
+  </script>
+</body>
+</html>
